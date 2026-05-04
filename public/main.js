@@ -223,9 +223,7 @@ function removePlayer(i) {
 
 function adjustBuyin(i, delta) {
   const p = session.players[i];
-  const next = p.buyins + delta;
-  if (next < 0) return;
-  p.buyins = next;
+  p.buyins = p.buyins + delta;
   saveLocal();
   render();
 }
@@ -250,7 +248,7 @@ function render() {
   const potTotal = session.players.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
   document.getElementById('pot-total').textContent = 'Pot: ' + fmtPlain(potTotal);
 
-  const hasAnyBuyins = session.players.some(p => p.buyins > 0);
+  const hasAnyBuyins = session.players.some(p => p.buyins !== 0);
   endBtn.style.display = hasAnyBuyins ? 'flex' : 'none';
 
   list.innerHTML = session.players.map((p, i) => {
@@ -259,10 +257,10 @@ function render() {
       <div class="avatar" style="background:${p.color}20;color:${p.color};border-color:${p.color}40;">${initials(p.name)}</div>
       <div class="player-info">
         <div class="player-name">${p.name}</div>
-        <div class="player-amount">${amt > 0 ? fmtPlain(amt) : 'No buy-in yet'}</div>
+        <div class="player-amount">${p.buyins !== 0 ? (amt < 0 ? '−' + fmtPlain(Math.abs(amt)) + ' (booked)' : fmtPlain(amt)) : 'No buy-in yet'}</div>
       </div>
       <div class="counter-group">
-        <button class="btn-counter btn-minus" onclick="adjustBuyin(${i},-1)" ${p.buyins===0?'disabled':''}>−</button>
+        <button class="btn-counter btn-minus" onclick="adjustBuyin(${i},-1)">−</button>
         <span class="buyin-count">${p.buyins}</span>
         <button class="btn-counter" onclick="adjustBuyin(${i},1)">+</button>
       </div>
@@ -273,7 +271,7 @@ function render() {
 
 // ── END SESSION ────────────────────────────────────
 function openEndSession() {
-  const activePlayers = session.players.filter(p => p.buyins > 0);
+  const activePlayers = session.players.filter(p => p.buyins !== 0);
   if (activePlayers.length === 0) { toast('No active buy-ins to settle!'); return; }
 
   const body = document.getElementById('settlement-body');
@@ -302,7 +300,7 @@ function openEndSession() {
 }
 
 function onCashoutChange() {
-  const activePlayers = session.players.filter(p => p.buyins > 0);
+  const activePlayers = session.players.filter(p => p.buyins !== 0);
   const totalPot = activePlayers.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
 
   let cashoutSum = 0;
@@ -402,7 +400,7 @@ function computeSettlements(results) {
 
 // ── SAVE SESSION TO DB ─────────────────────────────
 async function saveSession() {
-  const activePlayers = session.players.filter(p => p.buyins > 0);
+  const activePlayers = session.players.filter(p => p.buyins !== 0);
   const cashouts = [];
 
   activePlayers.forEach((p, i) => {
