@@ -277,20 +277,22 @@ function openEndSession() {
   if (activePlayers.length === 0) { toast('No active buy-ins to settle!'); return; }
 
   const body = document.getElementById('settlement-body');
-  const totalUnits = activePlayers.reduce((s, p) => s + p.buyins, 0);
+  const totalPot = activePlayers.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
 
   body.innerHTML = `
-    <div class="settle-section-title">Enter Final Chip Counts (in units)</div>
-    ${activePlayers.map((p, i) => `
+    <div class="settle-section-title">Enter Cash-Out Amount (₹)</div>
+    ${activePlayers.map((p, i) => {
+      const boughtIn = p.buyins * session.buyinUnit;
+      return `
       <div class="settle-player-row">
         <div class="avatar" style="background:${p.color}20;color:${p.color};border-color:${p.color}40;width:32px;height:32px;font-size:12px;">${initials(p.name)}</div>
         <div class="settle-name">${p.name}</div>
-        <div class="settle-bought">bought: ${p.buyins}</div>
-        <input type="number" class="settle-input" id="chips-${i}" data-idx="${i}" min="0" value="" placeholder="0" oninput="onChipsChange()" />
-      </div>
-    `).join('')}
+        <div class="settle-bought">in: ${fmtPlain(boughtIn)}</div>
+        <input type="number" class="settle-input" id="cashout-${i}" data-idx="${i}" min="0" value="" placeholder="₹" oninput="onCashoutChange()" />
+      </div>`;
+    }).join('')}
     <div id="settle-validation" class="settle-validation invalid">
-      Total must equal ${totalUnits} units
+      Total must equal ${fmtPlain(totalPot)}
     </div>
     <div id="settle-results" style="display:none;"></div>
   `;
@@ -299,55 +301,60 @@ function openEndSession() {
   document.getElementById('modal-session').classList.add('open');
 }
 
-function onChipsChange() {
+function onCashoutChange() {
   const activePlayers = session.players.filter(p => p.buyins > 0);
-  const totalUnits = activePlayers.reduce((s, p) => s + p.buyins, 0);
+  const totalPot = activePlayers.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
 
-  let chipSum = 0;
+  let cashoutSum = 0;
   let allFilled = true;
-  const chips = [];
+  const cashouts = [];
 
   activePlayers.forEach((p, i) => {
-    const inp = document.getElementById('chips-' + i);
-    const val = parseInt(inp.value);
-    if (isNaN(val) || inp.value === '') { allFilled = false; chips.push(0); }
-    else { chips.push(val); chipSum += val; }
+    const inp = document.getElementById('cashout-' + i);
+    const val = parseFloat(inp.value);
+    if (isNaN(val) || inp.value === '') { allFilled = false; cashouts.push(0); }
+    else { cashouts.push(val); cashoutSum += val; }
   });
 
   const validEl = document.getElementById('settle-validation');
   const resultsEl = document.getElementById('settle-results');
   const footerEl = document.getElementById('settlement-footer');
 
-  if (!allFilled || chipSum !== totalUnits) {
+  if (!allFilled || cashoutSum !== totalPot) {
     validEl.className = 'settle-validation invalid';
-    validEl.textContent = `Total: ${chipSum} / ${totalUnits} units ${chipSum === totalUnits ? '✓' : '✗'}`;
+    validEl.textContent = `Total: ${fmtPlain(cashoutSum)} / ${fmtPlain(totalPot)} ${cashoutSum === totalPot ? '✓' : '✗'}`;
     resultsEl.style.display = 'none';
     footerEl.style.display = 'none';
     return;
   }
 
   validEl.className = 'settle-validation valid';
-  validEl.textContent = `Total: ${chipSum} / ${totalUnits} units ✓`;
+  validEl.textContent = `Total: ${fmtPlain(cashoutSum)} / ${fmtPlain(totalPot)} ✓`;
 
-  const results = activePlayers.map((p, i) => ({
-    name: p.name,
-    buyins: p.buyins,
-    finalChips: chips[i],
-    net: chips[i] - p.buyins,
-    profit: (chips[i] - p.buyins) * session.buyinUnit,
-    color: p.color
-  }));
+  // P&L in ₹
+  const results = activePlayers.map((p, i) => {
+    const boughtIn = p.buyins * session.buyinUnit;
+    const net = cashouts[i] - boughtIn;
+    return {
+      name: p.name,
+      buyins: p.buyins,
+      cashout: cashouts[i],
+      net,
+      color: p.color
+    };
+  });
 
-  const settlements = computeSettlements(results, session.buyinUnit);
+  // Settlement (greedy) — net values are already in ₹
+  const settlements = computeSettlements(results);
 
   resultsEl.style.display = 'block';
   resultsEl.innerHTML = `
     <div class="settle-section-title">Results</div>
     ${results.map(r => {
-      const cls = r.profit > 0 ? 'up' : r.profit < 0 ? 'down' : 'even';
+      const cls = r.net > 0 ? 'up' : r.net < 0 ? 'down' : 'even';
       return `<div class="result-row">
         <span>${r.name}</span>
-        <span class="result-profit ${cls}">${fmt(r.profit)}</span>
+        <span class="result-profit ${cls}">${fmt(r.net)}</span>
       </div>`;
     }).join('')}
     ${settlements.length > 0 ? `
@@ -366,14 +373,13 @@ function onChipsChange() {
   footerEl.style.display = 'flex';
 }
 
-function computeSettlements(results, unit) {
+function computeSettlements(results) {
   const debtors = [];
   const creditors = [];
 
   results.forEach(r => {
-    const amt = r.net * unit;
-    if (amt < 0) debtors.push({ name: r.name, amount: Math.abs(amt) });
-    else if (amt > 0) creditors.push({ name: r.name, amount: amt });
+    if (r.net < 0) debtors.push({ name: r.name, amount: Math.abs(r.net) });
+    else if (r.net > 0) creditors.push({ name: r.name, amount: r.net });
   });
 
   debtors.sort((a, b) => b.amount - a.amount);
@@ -397,23 +403,25 @@ function computeSettlements(results, unit) {
 // ── SAVE SESSION TO DB ─────────────────────────────
 async function saveSession() {
   const activePlayers = session.players.filter(p => p.buyins > 0);
-  const chips = [];
+  const cashouts = [];
 
   activePlayers.forEach((p, i) => {
-    const val = parseInt(document.getElementById('chips-' + i).value);
-    chips.push(val);
+    const val = parseFloat(document.getElementById('cashout-' + i).value);
+    cashouts.push(val);
   });
 
-  const players = activePlayers.map((p, i) => ({
-    name: p.name,
-    buyins: p.buyins,
-    finalChips: chips[i],
-    net: chips[i] - p.buyins
-  }));
+  const players = activePlayers.map((p, i) => {
+    const boughtIn = p.buyins * session.buyinUnit;
+    return {
+      name: p.name,
+      buyins: p.buyins,
+      cashout: cashouts[i],
+      net: cashouts[i] - boughtIn
+    };
+  });
 
   const settlements = computeSettlements(
-    players.map(p => ({ ...p, color: '' })),
-    session.buyinUnit
+    players.map(p => ({ ...p, color: '' }))
   );
 
   const btn = document.getElementById('btn-save');

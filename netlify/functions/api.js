@@ -25,8 +25,8 @@ const sessionSchema = new mongoose.Schema({
   players: [{
     name: { type: String, required: true },
     buyins: { type: Number, required: true },
-    finalChips: { type: Number, required: true },
-    net: { type: Number, required: true }          // finalChips - buyins (units)
+    cashout: { type: Number, required: true },      // cash-out amount in ₹
+    net: { type: Number, required: true }            // cashout - (buyins × unit), in ₹
   }],
   settlements: [{
     from: { type: String, required: true },
@@ -119,7 +119,7 @@ app.get('/leaderboard', async (req, res) => {
         if (!map[p.name]) {
           map[p.name] = { name: p.name, totalProfit: 0, sessions: 0, wins: 0, losses: 0 };
         }
-        const profit = p.net * s.buyinUnit;
+        const profit = p.net;
         map[p.name].totalProfit += profit;
         map[p.name].sessions += 1;
         if (p.net > 0) map[p.name].wins += 1;
@@ -142,7 +142,7 @@ app.get('/leaderboard', async (req, res) => {
       buyinUnit: s.buyinUnit,
       playerCount: s.players.length,
       potTotal: s.players.reduce((sum, p) => sum + p.buyins, 0) * s.buyinUnit,
-      players: s.players.map(p => ({ name: p.name, net: p.net, profit: p.net * s.buyinUnit }))
+      players: s.players.map(p => ({ name: p.name, net: p.net, profit: p.net }))
     }));
 
     res.json({ players, recentSessions: recent });
