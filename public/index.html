@@ -32,9 +32,13 @@
     </div>
     <div class="panel-body">
       <div class="form-group">
-        <label class="form-label">Group Name</label>
-        <input type="text" id="inp-group" list="groups-list" placeholder="e.g. Office Friends" onchange="onGroupChange()" />
-        <datalist id="groups-list"></datalist>
+        <label class="form-label">Group</label>
+        <select id="sel-group" onchange="onGroupSelect()">
+          <option value="" disabled selected>Select a group…</option>
+          <option value="__new__">➕ Create New Group</option>
+        </select>
+        <input type="text" id="inp-new-group" placeholder="Enter new group name…" style="display:none; margin-top:8px;" onkeydown="if(event.key==='Enter')confirmNewGroup()" />
+        <button class="btn btn-gold" id="btn-new-group" onclick="confirmNewGroup()" style="display:none; margin-top:6px; width:100%;">Create Group</button>
       </div>
       <div class="form-group">
         <label class="form-label">Buy-in Unit (₹)</label>
@@ -43,9 +47,13 @@
       <div class="form-group">
         <label class="form-label">Add Player</label>
         <div class="input-with-btn">
-          <input type="text" id="inp-name" placeholder="Enter name…" onkeydown="if(event.key==='Enter')addPlayer()" />
+          <select id="sel-player" style="flex:1;">
+            <option value="" disabled selected>Select group first…</option>
+          </select>
           <button class="btn btn-gold" onclick="addPlayer()">Add</button>
         </div>
+        <input type="text" id="inp-new-player" placeholder="Enter new player name…" style="display:none; margin-top:8px;" onkeydown="if(event.key==='Enter')addNewPlayer()" />
+        <button class="btn btn-gold" id="btn-new-player" onclick="addNewPlayer()" style="display:none; margin-top:6px; width:100%;">Add New Player</button>
       </div>
     </div>
   </div>

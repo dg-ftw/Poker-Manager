@@ -53,6 +53,19 @@ app.get('/groups', async (req, res) => {
   }
 });
 
+// ── GET /groups/:group/players — get players for a group
+app.get('/groups/:group/players', async (req, res) => {
+  try {
+    const groupName = req.params.group;
+    const sessions = await Session.find({ group: groupName });
+    const nameSet = new Set();
+    sessions.forEach(s => s.players.forEach(p => nameSet.add(p.name)));
+    res.json([...nameSet].sort());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /sessions — save a completed session ────
 app.post('/sessions', async (req, res) => {
   try {

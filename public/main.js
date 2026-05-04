@@ -3,7 +3,8 @@ const COLORS = ['#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e9
 const API = '/api';
 
 // ── STATE ──────────────────────────────────────────
-let session = { groupName: '', buyinUnit: 500, players: [] }; // { name, buyins, color }
+let session = { groupName: '', buyinUnit: 500, players: [] };
+let knownPlayers = []; // player names fetched from DB for the selected group
 
 // ── LOCAL PERSISTENCE (survives refresh) ───────────
 function saveLocal() { localStorage.setItem('poker_live', JSON.stringify(session)); }
@@ -31,52 +32,183 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── FETCH GROUPS ───────────────────────────────────
+// ── FETCH & POPULATE GROUPS DROPDOWN ───────────────
 async function fetchGroups() {
   try {
     const res = await fetch(API + '/groups');
     if (!res.ok) return;
     const groups = await res.json();
-    const list = document.getElementById('groups-list');
-    list.innerHTML = groups.map(g => `<option value="${g}">`).join('');
+    const sel = document.getElementById('sel-group');
+    
+    // Build options: existing groups + "Create New"
+    let html = '<option value="" disabled>Select a group…</option>';
+    groups.forEach(g => {
+      html += `<option value="${g}" ${g === session.groupName ? 'selected' : ''}>${g}</option>`;
+    });
+    html += '<option value="__new__">➕ Create New Group</option>';
+    sel.innerHTML = html;
+    
+    // If we had a saved group, trigger player loading
+    if (session.groupName && groups.includes(session.groupName)) {
+      sel.value = session.groupName;
+      await fetchPlayersForGroup(session.groupName);
+    }
   } catch (err) {}
 }
 
-// ── SETUP ──────────────────────────────────────────
-function onGroupChange() {
-  const v = document.getElementById('inp-group').value.trim();
-  session.groupName = v;
+// ── GROUP DROPDOWN LOGIC ──────────────────────────
+function onGroupSelect() {
+  const sel = document.getElementById('sel-group');
+  const newGroupInput = document.getElementById('inp-new-group');
+  const newGroupBtn = document.getElementById('btn-new-group');
+  
+  if (sel.value === '__new__') {
+    // Show the text input for new group name
+    newGroupInput.style.display = 'block';
+    newGroupBtn.style.display = 'block';
+    newGroupInput.focus();
+    return;
+  }
+  
+  // Hide new group input
+  newGroupInput.style.display = 'none';
+  newGroupBtn.style.display = 'none';
+  
+  // Set the group and fetch its players
+  session.groupName = sel.value;
+  session.players = [];
   saveLocal();
+  render();
+  fetchPlayersForGroup(sel.value);
 }
 
+function confirmNewGroup() {
+  const inp = document.getElementById('inp-new-group');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  
+  // Add it to the dropdown and select it
+  const sel = document.getElementById('sel-group');
+  const opt = document.createElement('option');
+  opt.value = name;
+  opt.textContent = name;
+  // Insert before the "Create New" option (last one)
+  sel.insertBefore(opt, sel.lastElementChild);
+  sel.value = name;
+  
+  // Hide inputs
+  inp.value = '';
+  inp.style.display = 'none';
+  document.getElementById('btn-new-group').style.display = 'none';
+  
+  // Update state
+  session.groupName = name;
+  session.players = [];
+  knownPlayers = [];
+  saveLocal();
+  render();
+  refreshPlayerDropdown();
+  toast('Group "' + name + '" created');
+}
+
+// ── FETCH PLAYERS FOR A GROUP ─────────────────────
+async function fetchPlayersForGroup(groupName) {
+  try {
+    const res = await fetch(API + '/groups/' + encodeURIComponent(groupName) + '/players');
+    if (!res.ok) return;
+    knownPlayers = await res.json();
+  } catch (err) {
+    knownPlayers = [];
+  }
+  refreshPlayerDropdown();
+}
+
+function refreshPlayerDropdown() {
+  const sel = document.getElementById('sel-player');
+  const currentNames = session.players.map(p => p.name.toLowerCase());
+  
+  // Filter out players already at the table
+  const available = knownPlayers.filter(n => !currentNames.includes(n.toLowerCase()));
+  
+  let html = '';
+  if (!session.groupName) {
+    html = '<option value="" disabled selected>Select group first…</option>';
+  } else if (available.length === 0) {
+    html = '<option value="" disabled selected>No more known players</option>';
+    html += '<option value="__new__">➕ Add New Player</option>';
+  } else {
+    html = '<option value="" disabled selected>Select a player…</option>';
+    available.forEach(n => { html += `<option value="${n}">${n}</option>`; });
+    html += '<option value="__new__">➕ Add New Player</option>';
+  }
+  sel.innerHTML = html;
+  
+  // Hide new player input when dropdown refreshes
+  document.getElementById('inp-new-player').style.display = 'none';
+  document.getElementById('btn-new-player').style.display = 'none';
+}
+
+// ── SETUP ──────────────────────────────────────────
 function onUnitChange() {
   const v = parseInt(document.getElementById('inp-unit').value);
   if (v > 0) { session.buyinUnit = v; saveLocal(); render(); }
 }
 
 function addPlayer() {
-  const groupInp = document.getElementById('inp-group');
-  if (!session.groupName) {
-    toast('Please enter a Group Name first!');
-    groupInp.focus();
+  const sel = document.getElementById('sel-player');
+  
+  if (sel.value === '__new__') {
+    // Show the text input for new player
+    document.getElementById('inp-new-player').style.display = 'block';
+    document.getElementById('btn-new-player').style.display = 'block';
+    document.getElementById('inp-new-player').focus();
     return;
   }
+  
+  if (!sel.value) return;
+  
+  const name = sel.value;
+  addPlayerByName(name);
+}
 
-  const inp = document.getElementById('inp-name');
+function addNewPlayer() {
+  const inp = document.getElementById('inp-new-player');
   const name = inp.value.trim();
   if (!name) { inp.focus(); return; }
+  
   if (session.players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
     toast('Player already at the table!'); return;
   }
+  
+  inp.value = '';
+  inp.style.display = 'none';
+  document.getElementById('btn-new-player').style.display = 'none';
+  
+  // Add to knownPlayers so they show up in future dropdowns
+  if (!knownPlayers.find(n => n.toLowerCase() === name.toLowerCase())) {
+    knownPlayers.push(name);
+    knownPlayers.sort();
+  }
+  
+  addPlayerByName(name);
+}
+
+function addPlayerByName(name) {
+  if (!session.groupName) {
+    toast('Please select a Group first!'); return;
+  }
+  if (session.players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+    toast('Player already at the table!'); return;
+  }
+  
   session.players.push({
     name,
     buyins: 0,
     color: COLORS[session.players.length % COLORS.length]
   });
-  inp.value = '';
-  inp.focus();
   saveLocal();
   render();
+  refreshPlayerDropdown();
   toast('🃏 ' + name + ' joined');
 }
 
@@ -85,6 +217,7 @@ function removePlayer(i) {
   session.players.splice(i, 1);
   saveLocal();
   render();
+  refreshPlayerDropdown();
   toast(name + ' removed');
 }
 
@@ -99,7 +232,6 @@ function adjustBuyin(i, delta) {
 
 // ── RENDER ─────────────────────────────────────────
 function render() {
-  document.getElementById('inp-group').value = session.groupName || '';
   document.getElementById('inp-unit').value = session.buyinUnit;
   const list = document.getElementById('players-list');
   const endBtn = document.getElementById('btn-end');
@@ -197,7 +329,6 @@ function onChipsChange() {
   validEl.className = 'settle-validation valid';
   validEl.textContent = `Total: ${chipSum} / ${totalUnits} units ✓`;
 
-  // Calculate P&L
   const results = activePlayers.map((p, i) => ({
     name: p.name,
     buyins: p.buyins,
@@ -207,7 +338,6 @@ function onChipsChange() {
     color: p.color
   }));
 
-  // Settlement (greedy)
   const settlements = computeSettlements(results, session.buyinUnit);
 
   resultsEl.style.display = 'block';
@@ -294,11 +424,11 @@ async function saveSession() {
     const res = await fetch(API + '/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        group: session.groupName, 
-        buyinUnit: session.buyinUnit, 
-        players, 
-        settlements 
+      body: JSON.stringify({
+        group: session.groupName,
+        buyinUnit: session.buyinUnit,
+        players,
+        settlements
       })
     });
 
@@ -307,11 +437,11 @@ async function saveSession() {
       throw new Error(err.error || 'Failed to save');
     }
 
-    // Clear live session players but KEEP groupName and buyinUnit
     session.players = [];
     saveLocal();
     closeModal();
     render();
+    refreshPlayerDropdown();
     toast('✓ Session saved! Check the leaderboard.');
   } catch (err) {
     toast('Error: ' + err.message);
