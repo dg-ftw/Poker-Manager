@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The House — Leaderboard</title>
+<meta name="description" content="Poker leaderboard showing all-time and periodic profit rankings for your home poker group." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-block">
+      <div class="logo"><span>♠</span> The House <span>♣</span></div>
+      <div class="logo-sub">Poker Session Manager</div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link" id="nav-session">Session</a>
+      <a href="/leaderboard.html" class="nav-link active" id="nav-lb">Leaderboard</a>
+    </nav>
+  </header>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs" id="filter-tabs">
+    <button class="filter-tab active" onclick="setPeriod('all')" id="ft-all">All Time</button>
+    <button class="filter-tab" onclick="setPeriod('week')" id="ft-week">Week</button>
+    <button class="filter-tab" onclick="setPeriod('month')" id="ft-month">Month</button>
+    <button class="filter-tab" onclick="setPeriod('quarter')" id="ft-quarter">Quarter</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="panel" id="panel-lb">
+    <div class="panel-header">
+      <div class="panel-title">Leaderboard</div>
+      <div id="lb-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:0.1em;">—</div>
+    </div>
+    <div id="lb-body">
+      <div class="empty-state">
+        <div class="empty-suits">♠ ♥ ♦ ♣</div>
+        <div class="empty-msg">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT SESSIONS -->
+  <div class="panel" id="panel-recent" style="display:none;">
+    <div class="panel-header">
+      <div class="panel-title">Recent Sessions</div>
+    </div>
+    <div id="recent-body"></div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="leaderboard.js"></script>
+</body>
+</html>

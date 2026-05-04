@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The House — Poker Session</title>
+<meta name="description" content="Track poker buy-ins, settle up at end of session, and maintain a leaderboard for your home poker games." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-block">
+      <div class="logo"><span>♠</span> The House <span>♣</span></div>
+      <div class="logo-sub">Poker Session Manager</div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link active" id="nav-session">Session</a>
+      <a href="/leaderboard.html" class="nav-link" id="nav-lb">Leaderboard</a>
+    </nav>
+  </header>
+
+  <!-- SESSION SETUP -->
+  <div class="panel" id="panel-setup">
+    <div class="panel-header">
+      <div class="panel-title">Session Setup</div>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">Buy-in Unit (₹)</label>
+        <input type="number" id="inp-unit" value="500" min="1" step="100" onchange="onUnitChange()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Add Player</label>
+        <div class="input-with-btn">
+          <input type="text" id="inp-name" placeholder="Enter name…" onkeydown="if(event.key==='Enter')addPlayer()" />
+          <button class="btn btn-gold" onclick="addPlayer()">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE TABLE -->
+  <div class="panel" id="panel-table">
+    <div class="panel-header">
+      <div class="panel-title">At the Table</div>
+      <div class="pot-total" id="pot-total">Pot: ₹0</div>
+    </div>
+    <div id="players-list">
+      <div class="empty-state">
+        <div class="empty-suits">♠ ♥ ♦ ♣</div>
+        <div class="empty-msg">No players yet</div>
+        <div class="empty-hint">Add players above to start the session.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- END SESSION BUTTON -->
+  <button class="btn btn-gold btn-end-session" id="btn-end" onclick="openEndSession()" style="display:none;">
+    ♦ End Session
+  </button>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- END SESSION MODAL -->
+<div class="overlay" id="modal-session">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">♦ Settle Up</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="settlement-body">
+      <!-- populated by JS -->
+    </div>
+    <div class="modal-footer" id="settlement-footer" style="display:none;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="btn-save" onclick="saveSession()">Save & Close ♦</button>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
