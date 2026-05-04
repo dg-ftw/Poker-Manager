@@ -25,6 +25,14 @@
     </nav>
   </header>
 
+  <!-- GROUP SELECTION -->
+  <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+    <label style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;">Group:</label>
+    <select id="group-select" onchange="onGroupChange()" style="flex:1; padding: 8px 12px; font-size: 14px; background: rgba(15,34,23,0.7); border: 1px solid var(--border); color: var(--gold2); border-radius: var(--radius-sm);">
+      <option value="">Loading groups...</option>
+    </select>
+  </div>
+
   <!-- FILTER TABS -->
   <div class="filter-tabs" id="filter-tabs">
     <button class="filter-tab active" onclick="setPeriod('all')" id="ft-all">All Time</button>

@@ -3,7 +3,7 @@ const COLORS = ['#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e9
 const API = '/api';
 
 // ── STATE ──────────────────────────────────────────
-let session = { buyinUnit: 500, players: [] }; // { name, buyins, color }
+let session = { groupName: '', buyinUnit: 500, players: [] }; // { name, buyins, color }
 
 // ── LOCAL PERSISTENCE (survives refresh) ───────────
 function saveLocal() { localStorage.setItem('poker_live', JSON.stringify(session)); }
@@ -31,13 +31,37 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── FETCH GROUPS ───────────────────────────────────
+async function fetchGroups() {
+  try {
+    const res = await fetch(API + '/groups');
+    if (!res.ok) return;
+    const groups = await res.json();
+    const list = document.getElementById('groups-list');
+    list.innerHTML = groups.map(g => `<option value="${g}">`).join('');
+  } catch (err) {}
+}
+
 // ── SETUP ──────────────────────────────────────────
+function onGroupChange() {
+  const v = document.getElementById('inp-group').value.trim();
+  session.groupName = v;
+  saveLocal();
+}
+
 function onUnitChange() {
   const v = parseInt(document.getElementById('inp-unit').value);
   if (v > 0) { session.buyinUnit = v; saveLocal(); render(); }
 }
 
 function addPlayer() {
+  const groupInp = document.getElementById('inp-group');
+  if (!session.groupName) {
+    toast('Please enter a Group Name first!');
+    groupInp.focus();
+    return;
+  }
+
   const inp = document.getElementById('inp-name');
   const name = inp.value.trim();
   if (!name) { inp.focus(); return; }
@@ -75,6 +99,7 @@ function adjustBuyin(i, delta) {
 
 // ── RENDER ─────────────────────────────────────────
 function render() {
+  document.getElementById('inp-group').value = session.groupName || '';
   document.getElementById('inp-unit').value = session.buyinUnit;
   const list = document.getElementById('players-list');
   const endBtn = document.getElementById('btn-end');
@@ -269,7 +294,12 @@ async function saveSession() {
     const res = await fetch(API + '/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ buyinUnit: session.buyinUnit, players, settlements })
+      body: JSON.stringify({ 
+        group: session.groupName, 
+        buyinUnit: session.buyinUnit, 
+        players, 
+        settlements 
+      })
     });
 
     if (!res.ok) {
@@ -277,9 +307,9 @@ async function saveSession() {
       throw new Error(err.error || 'Failed to save');
     }
 
-    // Clear live session
+    // Clear live session players but KEEP groupName and buyinUnit
     session.players = [];
-    clearLocal();
+    saveLocal();
     closeModal();
     render();
     toast('✓ Session saved! Check the leaderboard.');
@@ -300,4 +330,5 @@ document.getElementById('modal-session').addEventListener('click', e => {
 
 // ── INIT ───────────────────────────────────────────
 loadLocal();
+fetchGroups();
 render();

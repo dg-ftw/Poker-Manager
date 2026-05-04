@@ -1,6 +1,7 @@
 // ── STATE ──────────────────────────────────────────
 const API = '/api';
 let currentPeriod = 'all';
+let currentGroup = '';
 
 // ── UTILS ──────────────────────────────────────────
 function fmt(n) {
@@ -17,13 +18,62 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── FETCH ──────────────────────────────────────────
-async function fetchLeaderboard(period) {
+// ── INIT & FETCH GROUPS ────────────────────────────
+async function init() {
+  try {
+    const res = await fetch(API + '/groups');
+    if (!res.ok) throw new Error();
+    const groups = await res.json();
+    
+    const select = document.getElementById('group-select');
+    if (groups.length === 0) {
+      select.innerHTML = '<option value="">No groups exist yet</option>';
+      renderLeaderboard([]);
+      renderRecent([]);
+      return;
+    }
+    
+    select.innerHTML = groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    
+    // Default to the first group, or whatever was stored in local session state if available
+    try {
+      const liveData = localStorage.getItem('poker_live');
+      if (liveData) {
+        const p = JSON.parse(liveData);
+        if (p.groupName && groups.includes(p.groupName)) {
+          select.value = p.groupName;
+        }
+      }
+    } catch(e) {}
+
+    currentGroup = select.value;
+    fetchLeaderboard();
+  } catch (err) {
+    document.getElementById('group-select').innerHTML = '<option value="">Error loading groups</option>';
+  }
+}
+
+// ── FILTER ACTIONS ─────────────────────────────────
+function onGroupChange() {
+  currentGroup = document.getElementById('group-select').value;
+  if (currentGroup) fetchLeaderboard();
+}
+
+function setPeriod(period) {
+  currentPeriod = period;
+  ['all','week','month','quarter'].forEach(p => {
+    document.getElementById('ft-' + p).classList.toggle('active', p === period);
+  });
+  if (currentGroup) fetchLeaderboard();
+}
+
+// ── FETCH LEADERBOARD ──────────────────────────────
+async function fetchLeaderboard() {
   const lbBody = document.getElementById('lb-body');
   lbBody.innerHTML = `<div class="empty-state"><div class="empty-msg">Loading…</div></div>`;
 
   try {
-    const res = await fetch(`${API}/leaderboard?period=${period}`);
+    const res = await fetch(`${API}/leaderboard?period=${currentPeriod}&group=${encodeURIComponent(currentGroup)}`);
     if (!res.ok) throw new Error('Failed to load');
     const data = await res.json();
     renderLeaderboard(data.players);
@@ -37,15 +87,6 @@ async function fetchLeaderboard(period) {
   }
 }
 
-// ── FILTER TABS ────────────────────────────────────
-function setPeriod(period) {
-  currentPeriod = period;
-  ['all','week','month','quarter'].forEach(p => {
-    document.getElementById('ft-' + p).classList.toggle('active', p === period);
-  });
-  fetchLeaderboard(period);
-}
-
 // ── RENDER LEADERBOARD ─────────────────────────────
 function renderLeaderboard(players) {
   const el = document.getElementById('lb-body');
@@ -55,7 +96,7 @@ function renderLeaderboard(players) {
     countEl.textContent = '—';
     el.innerHTML = `<div class="empty-state">
       <div class="empty-suits">♠ ♥ ♦ ♣</div>
-      <div class="empty-msg">No sessions recorded</div>
+      <div class="empty-msg">No sessions recorded for this group</div>
       <div class="empty-hint">Play a session and save results to see the leaderboard.</div>
     </div>`;
     return;
@@ -120,5 +161,5 @@ function renderRecent(sessions) {
   }).join('');
 }
 
-// ── INIT ───────────────────────────────────────────
-fetchLeaderboard('all');
+// ── RUN ────────────────────────────────────────────
+init();

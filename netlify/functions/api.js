@@ -20,6 +20,7 @@ const connectDB = async () => {
 // ── Schema ────────────────────────────────────────
 const sessionSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
+  group: { type: String, required: true },
   buyinUnit: { type: Number, required: true },
   players: [{
     name: { type: String, required: true },
@@ -42,11 +43,21 @@ app.use(async (req, res, next) => {
   catch (err) { res.status(500).json({ error: 'Database connection failed' }); }
 });
 
+// ── GET /groups — get all unique group names ──────
+app.get('/groups', async (req, res) => {
+  try {
+    const groups = await Session.distinct('group');
+    res.json(groups.sort());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /sessions — save a completed session ────
 app.post('/sessions', async (req, res) => {
   try {
-    const { buyinUnit, players, settlements } = req.body;
-    if (!buyinUnit || !players || players.length === 0) {
+    const { group, buyinUnit, players, settlements } = req.body;
+    if (!group || !buyinUnit || !players || players.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     // Validate zero-sum
@@ -54,7 +65,7 @@ app.post('/sessions', async (req, res) => {
     if (totalNet !== 0) {
       return res.status(400).json({ error: 'Net does not sum to zero' });
     }
-    const session = new Session({ buyinUnit, players, settlements, date: new Date() });
+    const session = new Session({ group, buyinUnit, players, settlements, date: new Date() });
     await session.save();
     res.json({ success: true, id: session._id });
   } catch (err) {
@@ -62,25 +73,31 @@ app.post('/sessions', async (req, res) => {
   }
 });
 
-// ── GET /leaderboard?period=all|week|month|quarter
+// ── GET /leaderboard?period=all|week|month|quarter&group=xyz
 app.get('/leaderboard', async (req, res) => {
   try {
     const period = req.query.period || 'all';
-    let dateFilter = {};
+    const groupName = req.query.group;
+    
+    if (!groupName) {
+      return res.json({ players: [], recentSessions: [] });
+    }
+
+    let filter = { group: groupName };
     const now = new Date();
 
     if (period === 'week') {
       const d = new Date(now); d.setDate(d.getDate() - 7);
-      dateFilter = { date: { $gte: d } };
+      filter.date = { $gte: d };
     } else if (period === 'month') {
       const d = new Date(now); d.setMonth(d.getMonth() - 1);
-      dateFilter = { date: { $gte: d } };
+      filter.date = { $gte: d };
     } else if (period === 'quarter') {
       const d = new Date(now); d.setMonth(d.getMonth() - 3);
-      dateFilter = { date: { $gte: d } };
+      filter.date = { $gte: d };
     }
 
-    const sessions = await Session.find(dateFilter).sort({ date: -1 });
+    const sessions = await Session.find(filter).sort({ date: -1 });
 
     // Aggregate per player
     const map = {};
