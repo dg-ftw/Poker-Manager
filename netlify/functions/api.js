@@ -43,8 +43,10 @@ app.use(async (req, res, next) => {
   catch (err) { res.status(500).json({ error: 'Database connection failed' }); }
 });
 
+const router = express.Router();
+
 // ── GET /groups — get all unique group names ──────
-app.get('/groups', async (req, res) => {
+router.get('/groups', async (req, res) => {
   try {
     const groups = await Session.distinct('group');
     res.json(groups.sort());
@@ -54,7 +56,7 @@ app.get('/groups', async (req, res) => {
 });
 
 // ── GET /groups/:group/players — get players for a group
-app.get('/groups/:group/players', async (req, res) => {
+router.get('/groups/:group/players', async (req, res) => {
   try {
     const groupName = req.params.group;
     const sessions = await Session.find({ group: groupName });
@@ -67,7 +69,7 @@ app.get('/groups/:group/players', async (req, res) => {
 });
 
 // ── POST /sessions — save a completed session ────
-app.post('/sessions', async (req, res) => {
+router.post('/sessions', async (req, res) => {
   try {
     const { group, buyinUnit, players, settlements } = req.body;
     if (!group || !buyinUnit || !players || players.length === 0) {
@@ -87,7 +89,7 @@ app.post('/sessions', async (req, res) => {
 });
 
 // ── GET /leaderboard?period=all|week|month|quarter&group=xyz
-app.get('/leaderboard', async (req, res) => {
+router.get('/leaderboard', async (req, res) => {
   try {
     const period = req.query.period || 'all';
     const groupName = req.query.group;
@@ -150,5 +152,8 @@ app.get('/leaderboard', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.use('/api', router);
+app.use('/.netlify/functions/api', router);
 
 module.exports.handler = serverless(app);
