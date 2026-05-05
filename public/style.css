@@ -370,6 +370,85 @@ input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 12px rgba
   .filter-tab { font-size: 10px; padding: 8px 6px; }
 }
 
+/* ── HOW TO USE GUIDE ──────────────────────────── */
+.guide-panel {
+  margin-top: 20px; margin-bottom: 20px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg2); backdrop-filter: var(--blur);
+  overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.guide-toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px; cursor: pointer;
+  list-style: none; user-select: none;
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  letter-spacing: 0.06em; color: var(--text2);
+  transition: all 0.2s;
+}
+.guide-toggle::-webkit-details-marker { display: none; }
+.guide-toggle:hover { color: var(--gold2); background: rgba(201,168,76,0.04); }
+.guide-toggle-icon {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(201,168,76,0.15); color: var(--gold2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.guide-chevron {
+  margin-left: auto; font-size: 14px; color: var(--text3);
+  transition: transform 0.3s;
+}
+.guide-panel[open] .guide-chevron { transform: rotate(180deg); }
+
+.guide-body {
+  padding: 4px 20px 20px;
+  border-top: 1px solid var(--border);
+  animation: fadeUp 0.3s ease;
+}
+
+.guide-step {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(180,150,60,0.06);
+}
+.guide-step:last-of-type { border-bottom: none; }
+.guide-step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(201,168,76,0.1); color: var(--gold2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 700;
+  flex-shrink: 0; margin-top: 2px;
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.guide-step-title {
+  font-family: 'Playfair Display', serif; font-size: 14px;
+  font-weight: 600; color: var(--text); margin-bottom: 3px;
+}
+.guide-step-desc {
+  font-size: 12px; color: var(--text2); line-height: 1.5;
+}
+.guide-step-desc strong { color: var(--gold2); }
+
+.guide-step-highlight {
+  background: var(--red-bg);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px; margin: 8px 0;
+}
+.guide-step-highlight .guide-step-num {
+  background: transparent; border: none; font-size: 18px;
+}
+.guide-step-highlight .guide-step-title { color: var(--red2); }
+.guide-step-highlight .guide-step-desc strong { color: var(--red2); }
+
+.guide-tip {
+  margin-top: 14px; padding: 12px 16px;
+  background: rgba(39,174,96,0.06);
+  border: 1px solid rgba(39,174,96,0.15);
+  border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--text2); line-height: 1.5;
+}
+.guide-tip strong { color: var(--green2); }
+
 /* ── SCROLLBAR ─────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
