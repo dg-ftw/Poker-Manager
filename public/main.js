@@ -248,7 +248,7 @@ function render() {
   const potTotal = session.players.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
   document.getElementById('pot-total').textContent = 'Pot: ' + fmtPlain(potTotal);
 
-  const hasAnyBuyins = session.players.some(p => p.buyins !== 0);
+  const hasAnyBuyins = session.players.length > 0;
   endBtn.style.display = hasAnyBuyins ? 'flex' : 'none';
 
   list.innerHTML = session.players.map((p, i) => {
@@ -271,8 +271,8 @@ function render() {
 
 // ── END SESSION ────────────────────────────────────
 function openEndSession() {
-  const activePlayers = session.players.filter(p => p.buyins !== 0);
-  if (activePlayers.length === 0) { toast('No active buy-ins to settle!'); return; }
+  const activePlayers = [...session.players];
+  if (activePlayers.length === 0) { toast('No players at the table!'); return; }
 
   const body = document.getElementById('settlement-body');
   const totalPot = activePlayers.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
@@ -300,7 +300,7 @@ function openEndSession() {
 }
 
 function onCashoutChange() {
-  const activePlayers = session.players.filter(p => p.buyins !== 0);
+  const activePlayers = [...session.players];
   const totalPot = activePlayers.reduce((s, p) => s + p.buyins, 0) * session.buyinUnit;
 
   let cashoutSum = 0;
@@ -400,7 +400,7 @@ function computeSettlements(results) {
 
 // ── SAVE SESSION TO DB ─────────────────────────────
 async function saveSession() {
-  const activePlayers = session.players.filter(p => p.buyins !== 0);
+  const activePlayers = [...session.players];
   const cashouts = [];
 
   activePlayers.forEach((p, i) => {
